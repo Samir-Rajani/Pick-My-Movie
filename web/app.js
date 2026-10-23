@@ -10,6 +10,7 @@ let searchToken = 0;
 let recommendationToken = 0;
 let timer;
 const pickMyMovieBase = location.pathname === '/pickmymovie' || location.pathname.startsWith('/pickmymovie/') ? '/pickmymovie' : '';
+document.querySelector('.brand').setAttribute('href', `${pickMyMovieBase}/`);
 
 async function getJson(url) {
   const response = await fetch(url);

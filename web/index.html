@@ -6,8 +6,11 @@
   <meta name="theme-color" content="#10151a">
   <meta name="description" content="Find your next movie from the films you already love.">
   <title>PickMyMovie — Find your next favorite</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js" defer></script>
+  <script>
+    const pickMyMovieBase = location.pathname === '/pickmymovie' || location.pathname.startsWith('/pickmymovie/') ? '/pickmymovie' : '';
+    document.write('<link rel="stylesheet" href="' + pickMyMovieBase + '/styles.css">');
+    document.write('<script src="' + pickMyMovieBase + '/app.js" defer><\\/script>');
+  </script>
 </head>
 <body>
   <div class="shell">

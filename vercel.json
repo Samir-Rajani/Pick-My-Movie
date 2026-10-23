@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "outputDirectory": "web",
+  "functions": {
+    "api/*.py": {
+      "excludeFiles": "{data/ratings.csv,tests/**,.github/**,web/**}"
+    }
+  }
+}

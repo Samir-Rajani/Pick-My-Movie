@@ -1,0 +1,6 @@
+data/ratings.csv
+tests/
+__pycache__/
+.git/
+.github/
+*.pyc

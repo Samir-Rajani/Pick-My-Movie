@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10151a">
+  <meta name="description" content="Find your next movie from the films you already love.">
+  <title>PickMyMovie — Find your next favorite</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="PickMyMovie home"><span class="brand-mark">✦</span> PICK<span>MYMOVIE</span></a>
+      <div class="topright"><span class="live-dot"></span> TASTE ENGINE <span class="top-divider">/</span> <span id="data-mode">LOADING</span></div>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> A DIFFERENT KIND OF MOVIE NIGHT</div>
+          <h1 id="hero-title">Great movies.<br><em>Your</em> kind of movies.</h1>
+          <p>Pick a few films you love. We'll find what connects them and build a watchlist around your taste.</p>
+          <a href="#taste" class="hero-link">Build my watchlist <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="hero-art" aria-hidden="true"><div class="reel reel-one"></div><div class="reel reel-two"></div><div class="art-grain"></div><div class="art-label">CURATED FOR YOU <span>001 — 024</span></div></div>
+      </section>
+      <section id="taste" class="workspace" aria-labelledby="taste-title">
+        <div class="section-heading"><div><div class="section-kicker">01 / YOUR TASTE</div><h2 id="taste-title">Start with what you love.</h2></div><p>Select at least one film. Add more to sharpen the results.</p></div>
+        <div class="builder">
+          <div class="search-panel">
+            <label for="movie-search">FIND A FILM</label>
+            <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="movie-search" type="search" placeholder="Search by movie title..." autocomplete="off" aria-controls="search-results"><span class="shortcut">SEARCH</span></div>
+            <div id="search-results" class="search-results" aria-live="polite"></div>
+          </div>
+          <div class="selection-panel"><div class="panel-heading"><span>YOUR PICKS</span><span id="pick-count">0 SELECTED</span></div><div id="selected" class="selected"><div class="empty-picked">Your favorites will appear here. Start searching to add a movie.</div></div><button id="clear-button" class="clear-button" type="button">Clear selections <span aria-hidden="true">×</span></button></div>
+        </div>
+      </section>
+      <section id="discover" class="discover" aria-labelledby="discover-title"><div class="section-heading discover-heading"><div><div class="section-kicker">02 / THE SHORTLIST</div><h2 id="discover-title">Made for your queue.</h2></div><div class="filter-wrap"><label for="genre-filter">FILTER BY GENRE</label><select id="genre-filter"><option value="">All genres</option></select></div></div><div id="results-status" class="results-status" role="status">Choose a film above to see recommendations.</div><div id="recommendations" class="recommendations"></div></section>
+      <section class="method"><span class="method-icon">✳</span><div><h3>How it finds your next favorite</h3><p>Recommendations compare the genres of your picks with the catalog. When the ratings model is available, the engine also considers films liked by viewers with similar taste. Every recommendation includes a short explanation.</p></div><a href="https://github.com/Samir-Rajani" target="_blank" rel="noopener noreferrer">ABOUT THE BUILDER ↗</a></section>
+    </main>
+    <footer><span>✦ PICKMYMOVIE</span><span>BUILT WITH CURIOSITY · POWERED BY MOVIELENS DATA</span><span>© 2026</span></footer>
+  </div>
+</body>
+</html>

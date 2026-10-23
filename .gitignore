@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+data/ratings.csv
+.vercel/
+*.log
+tests/tmp*/
+.DS_Store

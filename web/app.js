@@ -9,6 +9,7 @@ const liked = new Map();
 let searchToken = 0;
 let recommendationToken = 0;
 let timer;
+const pickMyMovieBase = location.pathname === '/pickmymovie' || location.pathname.startsWith('/pickmymovie/') ? '/pickmymovie' : '';
 
 async function getJson(url) {
   const response = await fetch(url);
@@ -44,7 +45,7 @@ async function search() {
   const query = searchInput.value.trim();
   const token = ++searchToken;
   try {
-    const movies = await getJson(`/api/movies?q=${encodeURIComponent(query)}`);
+    const movies = await getJson(`${pickMyMovieBase}/api/movies?q=${encodeURIComponent(query)}`);
     if (token !== searchToken) return;
     searchResults.replaceChildren();
     const available = movies.filter(movie => !liked.has(movie.id));
@@ -65,7 +66,7 @@ async function recommend() {
   status.textContent = 'Finding your matches…';
   try {
     const params = new URLSearchParams({liked: [...liked.keys()].join(','), genre: genreFilter.value, limit: '12'});
-    const movies = await getJson(`/api/recommendations?${params}`);
+    const movies = await getJson(`${pickMyMovieBase}/api/recommendations?${params}`);
     if (token !== recommendationToken) return;
     recs.replaceChildren();
     status.textContent = `${movies.length} ${movies.length === 1 ? 'FILM' : 'FILMS'} SELECTED FOR YOUR TASTE`;
@@ -87,7 +88,7 @@ document.querySelector('#clear-button').addEventListener('click', () => { liked.
 
 async function initialize() {
   try {
-    const [health, genres] = await Promise.all([getJson('/api/health'), getJson('/api/genres')]);
+    const [health, genres] = await Promise.all([getJson(`${pickMyMovieBase}/api/health`), getJson(`${pickMyMovieBase}/api/genres`)]);
     document.querySelector('#data-mode').textContent = `${health.movies.toLocaleString()} FILMS · ${health.mode.toUpperCase()} MODE`;
     genres.forEach(genre => { const option = element('option', '', genre); option.value = genre; genreFilter.append(option); });
     for (const movie of JSON.parse(localStorage.getItem('pickmymovie-liked') || localStorage.getItem('cinemamatch-liked') || '[]')) if (movie && Number.isInteger(movie.id)) liked.set(movie.id, movie);

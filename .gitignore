@@ -7,3 +7,6 @@ data/ratings.csv
 *.log
 tests/tmp*/
 .DS_Store
+
+.vercel
+.env*

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "protocol": {
+    "split": "per-user temporal; latest positive=test, second latest=validation, earlier ratings=train",
+    "positive_rating_threshold": 4.0,
+    "seed_movies_per_user": 5,
+    "random_seed": 20261024,
+    "users_scanned": 10000,
+    "ratings_scanned": 1496612,
+    "eligible_users": 8894,
+    "evaluated_users": 1000,
+    "candidate_movies": 5000,
+    "collaborative_movies": 1500,
+    "recommendations_per_user": 10
+  },
+  "selected_content_weight": 0.25,
+  "validation_hybrid_grid": {
+    "0.0": {
+      "recall@10": 0.133,
+      "ndcg@10": 0.0666,
+      "mrr@10": 0.0464,
+      "catalog_coverage@10": 0.188
+    },
+    "0.25": {
+      "recall@10": 0.138,
+      "ndcg@10": 0.0692,
+      "mrr@10": 0.0482,
+      "catalog_coverage@10": 0.2018
+    },
+    "0.5": {
+      "recall@10": 0.125,
+      "ndcg@10": 0.0633,
+      "mrr@10": 0.0446,
+      "catalog_coverage@10": 0.2204
+    },
+    "0.75": {
+      "recall@10": 0.086,
+      "ndcg@10": 0.0494,
+      "mrr@10": 0.0383,
+      "catalog_coverage@10": 0.2962
+    },
+    "1.0": {
+      "recall@10": 0.018,
+      "ndcg@10": 0.0103,
+      "mrr@10": 0.008,
+      "catalog_coverage@10": 0.2932
+    }
+  },
+  "test": {
+    "popularity": {
+      "recall@10": 0.05,
+      "ndcg@10": 0.023,
+      "mrr@10": 0.0149,
+      "catalog_coverage@10": 0.0028,
+      "mean_latency_ms": 0.328
+    },
+    "content": {
+      "recall@10": 0.012,
+      "ndcg@10": 0.006,
+      "mrr@10": 0.0042,
+      "catalog_coverage@10": 0.3414,
+      "mean_latency_ms": 22.155
+    },
+    "collaborative": {
+      "recall@10": 0.093,
+      "ndcg@10": 0.0431,
+      "mrr@10": 0.0284,
+      "catalog_coverage@10": 0.187,
+      "mean_latency_ms": 0.268
+    },
+    "hybrid": {
+      "recall@10": 0.089,
+      "ndcg@10": 0.0414,
+      "mrr@10": 0.0272,
+      "catalog_coverage@10": 0.2018,
+      "mean_latency_ms": 37.93
+    }
+  },
+  "runtime_seconds": 214.93,
+  "notes": [
+    "Recall@K equals hit rate here because each user has one held-out target.",
+    "Metrics apply to the recorded sampled users and candidate universe, not every catalog title or future user.",
+    "The model uses only training interactions; validation selects the blend and test reports final results."
+  ]
+}

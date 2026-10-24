@@ -57,13 +57,27 @@ class Recommender:
             self.model = json.loads(model_path.read_text(encoding="utf-8"))
         self.popularity = {int(k): v for k, v in self.model.get("popularity", {}).items()}
         self.neighbors = {int(k): {int(n): float(s) for n, s in v.items()} for k, v in self.model.get("neighbors", {}).items()}
+        rating_count = sum(value["count"] for value in self.popularity.values())
+        self.global_rating_mean = (
+            sum(value["mean"] * value["count"] for value in self.popularity.values()) / rating_count
+            if rating_count else 0
+        )
 
     def search(self, query: str, limit: int = 12) -> list[dict]:
         q = query.strip().casefold()
         if not q:
-            return [m.as_dict() for m in list(self.movies.values())[:limit]]
+            movies = sorted(
+                self.movies.values(),
+                key=lambda movie: (-self.popularity.get(movie.id, {}).get("count", 0), movie.title),
+            )
+            return [movie.as_dict() for movie in movies[:limit]]
         matches = [m for m in self.movies.values() if q in m.title.casefold()]
-        matches.sort(key=lambda m: (not m.title.casefold().startswith(q), len(m.title), m.title))
+        matches.sort(key=lambda movie: (
+            not movie.title.casefold().startswith(q),
+            len(movie.title),
+            -self.popularity.get(movie.id, {}).get("count", 0),
+            movie.title,
+        ))
         return [m.as_dict() for m in matches[:limit]]
 
     def recommend(self, liked: list[int], limit: int = 12, genre_filter: str = "") -> list[dict]:
@@ -82,6 +96,15 @@ class Recommender:
             candidate_ids.update(self.neighbors.get(seed_id, {}))
         if genre_filter:
             candidate_ids &= self.genre_index.get(genre_filter, set())
+        collaborative = {}
+        for movie_id in candidate_ids:
+            values = [self.neighbors.get(seed_id, {}).get(movie_id, 0) for seed_id in liked]
+            matches = [value for value in values if value > 0]
+            if matches:
+                collaborative[movie_id] = sum(matches) / math.sqrt(len(matches))
+        collaborative_max = max(collaborative.values(), default=1)
+        collaborative = {movie_id: value / collaborative_max for movie_id, value in collaborative.items()}
+
         results = []
         genre_scores: dict[tuple[str, ...], float] = {}
         for movie_id in candidate_ids:
@@ -91,15 +114,17 @@ class Recommender:
             if movie.genres not in genre_scores:
                 genre_scores[movie.genres] = sum(weights[g] * self.genre_weight[g] for g in movie.genres) / (magnitude * self.movie_vector_norm[movie.id])
             genre_score = genre_scores[movie.genres]
-            neighbor_score = max((self.neighbors.get(seed_id, {}).get(movie.id, 0) for seed_id in liked), default=0)
+            neighbor_score = collaborative.get(movie.id, 0)
             votes = self.popularity.get(movie.id, {}).get("count", 0)
             rating = self.popularity.get(movie.id, {}).get("mean", 0)
-            confidence = min(1.0, math.log1p(votes) / math.log1p(100)) if votes else 0
-            quality = max(0.0, (rating - 2.5) / 2.5) * confidence
-            score = (0.69 * genre_score + 0.26 * neighbor_score + 0.05 * quality) if self.neighbors else genre_score
+            quality = (
+                ((rating * votes + 25 * self.global_rating_mean) / (votes + 25) - 0.5) / 4.5
+                if votes else 0
+            )
+            score = (0.2425 * genre_score + 0.7275 * neighbor_score + 0.03 * quality) if self.neighbors else genre_score
             if score <= 0:
                 continue
-            results.append((score, votes, movie.title, movie.id, neighbor_score))
+            results.append((score, votes, movie.title, movie.id, neighbor_score, genre_score, quality))
         if self.popularity:
             well_observed = [item for item in results if item[1] >= 500 and "\ufffd" not in item[2]]
             if len(well_observed) >= limit:
@@ -107,7 +132,7 @@ class Recommender:
         results.sort(key=lambda item: (-item[0], -item[1], item[2]))
         # Diversify the visible shortlist so one liked genre combination does not
         # fill every card with near-identical movies.
-        remaining = results[:max(500, limit * 30)]
+        remaining = results[:max(300, limit * 30)]
         selected = []
         genre_sets = {item[3]: set(self.movies[item[3]].genres) for item in remaining}
         while remaining and len(selected) < limit:
@@ -121,16 +146,27 @@ class Recommender:
             selected.append(best)
             remaining.remove(best)
         output = []
-        for score, votes, _, movie_id, neighbor_score in selected:
+        for score, votes, _, movie_id, neighbor_score, genre_score, quality in selected:
             movie = self.movies[movie_id]
             shared = sorted((g for g in movie.genres if g in weights), key=lambda g: -weights[g])
-            if neighbor_score > 0.3:
+            if neighbor_score > 0.35:
                 reason = "Liked by viewers with similar taste"
             elif shared:
                 reason = "Matches your taste for " + ", ".join(shared[:2])
             else:
                 reason = "Related to your liked movies"
-            output.append({**movie.as_dict(), "score": round(score, 3), "reason": reason, "rating": round(self.popularity[movie_id]["mean"], 1) if votes else None, "ratingCount": votes})
+            output.append({
+                **movie.as_dict(),
+                "score": round(score, 3),
+                "reason": reason,
+                "rating": round(self.popularity[movie_id]["mean"], 1) if votes else None,
+                "ratingCount": votes,
+                "signals": {
+                    "content": round(genre_score, 3),
+                    "collaborative": round(neighbor_score, 3),
+                    "quality": round(quality, 3),
+                },
+            })
         return output
 
     def genres(self) -> list[str]:

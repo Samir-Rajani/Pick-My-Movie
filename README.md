@@ -43,9 +43,32 @@ flowchart LR
 
 The live request sends at most 30 liked movie IDs to `GET /api/recommendations`. For each genre, the engine applies an inverse frequency weight, so a less common genre tells us more than a ubiquitous one. It builds a profile from the liked films and scores candidate movies with cosine similarity. An inverted genre index limits each request to relevant candidates. Already liked films are excluded.
 
-When `model.json` exists, the score combines genre similarity (69%), item co-like cosine similarity (26%), and a small confidence weighted rating quality term (5%). The offline build treats ratings of 4 or higher as likes, restricts item pairs to popular movies, caps each user's contribution at 20 liked films, and saves up to 35 neighbors per movie. These are practical engineering choices, not tuned hyperparameters or claims of measured accuracy.
+When `model.json` exists, validation selects a 25% genre / 75% collaborative personalization blend; that blend receives 97% of the final score and a confidence-weighted rating-quality term receives 3%. The offline build treats ratings of 4 or higher as likes, restricts item pairs to the 1,500 most-observed movies, caps each user's contribution at their 20 most recent likes, applies support shrinkage, and saves up to 35 neighbors per movie. A genre-overlap penalty diversifies the final shortlist.
 
-**Honest limitations:** The catalog metadata does not include plots or posters. The collaborative model is trained on historical ratings, not live user feedback; “real time” means the shortlist recomputes whenever the visitor changes their picks. New or rare movies have less collaborative coverage. The Kaggle snapshot is static and does not supply current releases. The ranking weights have not yet been validated through an offline evaluation.
+**Honest limitations:** The catalog metadata does not include plots or posters. The collaborative model is trained on historical ratings, not live user feedback; “real time” means the shortlist recomputes whenever the visitor changes their picks. New or rare movies have less collaborative coverage. The snapshot ends in 2019 and does not supply current releases. Offline implicit-feedback metrics do not prove user satisfaction.
+
+## Offline evaluation
+
+`evaluate.py` performs a leakage-resistant temporal evaluation. For each eligible user, the latest positive rating is the test target, the second latest is validation, and earlier interactions are training data. It compares popularity, genre-content, collaborative, and hybrid ranking; selects the hybrid blend on validation NDCG; and records held-out Recall@10, NDCG@10, MRR@10, catalog coverage, and measured ranking latency.
+
+The committed `evaluation/results.json` records the exact protocol, sample sizes, candidate universe, random seed, and results. Reproduce the reported run after downloading `ratings.csv`:
+
+```powershell
+python evaluate.py
+```
+
+With one held-out target per user, Recall@10 is equivalent to hit rate. Results apply only to the recorded sample and candidate universe; do not generalize them to every catalog item or future user.
+
+The committed run scanned 10,000 users and evaluated a deterministic sample of 1,000 within the 5,000 most-observed candidate movies:
+
+| Strategy | Recall@10 | NDCG@10 | MRR@10 | Coverage@10 | Mean offline latency |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Popularity | 5.0% | 0.0230 | 0.0149 | 0.28% | 0.3 ms |
+| Genre content | 1.2% | 0.0060 | 0.0042 | 34.14% | 22.2 ms |
+| Collaborative | 9.3% | 0.0431 | 0.0284 | 18.70% | 0.3 ms |
+| Validation-selected hybrid + diversity | 8.9% | 0.0414 | 0.0272 | 20.18% | 37.9 ms |
+
+The collaborative model had the strongest held-out relevance in this run. The selected hybrid was retained because validation chose its 25% content blend and it broadened test catalog coverage, but the relevance tradeoff is reported rather than hidden.
 
 ## API
 
@@ -62,19 +85,23 @@ Invalid numeric inputs return HTTP 400. The API is local by default and does not
 
 ```powershell
 python -m unittest discover -s tests -v
+python -m py_compile app.py recommender.py build_model.py evaluate.py
+node --check public/app.js
 ```
+
+Run `python evaluate.py` only when the local `data/ratings.csv` is present; the documented 10,000-user evaluation takes several minutes.
 
 For a containerized run, use `docker build -t pickmymovie .` and `docker run --rm -p 8000:8000 pickmymovie`. The image includes the catalog and compact model, while `.dockerignore` excludes the raw ratings. GitHub Actions runs syntax checks and unit tests on each push and pull request.
 
 ### Hosting on your domain
 
-This repository is prepared as a separate Vercel project. The `web/` directory is the static output and `api/*.py` provides Python Functions for the four API endpoints. `vercel.json` selects the static output directory, and `.vercelignore` excludes raw ratings. Keeping PickMyMovie in its own repository lets it deploy independently from the Next.js portfolio at `samirrajani.com`.
+This repository is prepared as a separate Vercel project. The `public/` directory is served through Vercel's CDN and `api/*.py` provides Python Functions for the four API endpoints. `.vercelignore` excludes raw ratings. Keeping PickMyMovie in its own repository lets it deploy independently from the Next.js portfolio at `samirrajani.com`.
 
-1. Push this folder to a new GitHub repository named `PickMyMovie`.
-2. In Vercel, import that repository as a new project. Keep the project root at the repository root; `vercel.json` provides the build settings.
-3. Test the assigned `vercel.app` URL: search for a film, add it, confirm recommendations, and check `/api/health` reports the full catalog and collaborative model.
-4. Add `pickmymovie.samirrajani.com` to the new Vercel project's Domains settings. Configure the exact CNAME record Vercel displays. This does not move or replace the existing `samirrajani.com` portfolio.
-5. Add a project card on the portfolio linking to the new subdomain and the PickMyMovie GitHub repository.
+1. After review and approval, commit and push the existing `Pick-My-Movie` repository.
+2. Redeploy its existing Vercel project with the repository root as the project root; `vercel.json` supplies function exclusions and security headers.
+3. Test the stable `vercel.app` URL: `/`, `/styles.css`, `/app.js`, all four `/api/*` endpoints, and confirm `/api/health` reports `modelSchema: 2`.
+4. Deploy the Personal Website repository only after step 3 passes. Its external rewrite exposes the app at `samirrajani.com/pick-my-movie`.
+5. Verify the legacy `/pickmymovie` redirect, the case study, sitemap, search, recommendations, genre filtering, and 320px layout on production.
 
 The deployment and DNS steps require access to the GitHub, Vercel, and DNS accounts. They have not been performed by this repository setup.
 
@@ -84,28 +111,22 @@ The deployment and DNS steps require access to the GitHub, Vercel, and DNS accou
 app.py                 HTTP server and JSON API
 recommender.py         Catalog loading, search, ranking, explanations
 build_model.py         Streaming offline ratings model build
-web/                   Accessible responsive interface
+evaluate.py            Temporal holdout evaluation and baselines
+public/                Accessible responsive interface
 data/movies.csv        Full movie catalog, tracked for deployment
 data/model.json        Compact ratings model, tracked for deployment
 data/demo_movies.csv   Fallback catalog
 api/                   Vercel Python Functions
 tests/                 Core behavior checks
+evaluation/results.json Reproducible measured results
 ```
 
 ### Design decisions and next steps
 
-- A standard library server makes the demo easy to run and inspect. For a public launch, move the API behind a production ASGI server and add request limits, logging, monitoring, and deployment configuration.
+- A standard library server makes the demo easy to run locally; production requests use Vercel Python Functions.
 - The UI stores favorites locally to avoid adding accounts before they are needed. Multi-device sync would require authentication and a database.
-- A useful next experiment is an offline train/test split by user with Recall@10 and coverage, compared against popularity and genre-only baselines. Record dataset version, split rules, and latency before reporting any performance claim.
+- A useful next experiment is repeating the temporal protocol across multiple deterministic samples and reporting confidence intervals.
 - A public demo should add a licensed artwork source only after checking attribution, usage rights, and API limits.
-
-## Portfolio framing
-
-This project extends experience shown in [Samir's GitHub](https://github.com/Samir-Rajani): deployed products, user-facing design, and applied machine learning. For a résumé, use only claims you can verify after running with full data. A draft bullet:
-
-> Built a full stack movie recommendation app with a Python API, responsive UI, explainable genre and item similarity ranking, and a streaming ratings pipeline across a 62,423-film catalog.
-
-Add measured request latency and offline evaluation results once collected. A live demo URL, a 45-second walkthrough, and a short architecture diagram will make the repository much stronger for applications.
 
 ## Attribution
 

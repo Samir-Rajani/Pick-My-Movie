@@ -20,6 +20,14 @@ class RecommenderTests(unittest.TestCase):
         results = self.engine.recommend([1, 999, 1], genre_filter='Action')
         self.assertEqual({movie['id'] for movie in results}, {2, 4})
 
+    def test_hybrid_aggregates_multiple_seed_signals(self):
+        model = Path(__file__).parent / 'fixtures' / 'model.json'
+        engine = Recommender(self.csv, model)
+        results = engine.recommend([1, 3], limit=2)
+        beta = next(movie for movie in results if movie['id'] == 2)
+        self.assertEqual(beta['signals']['collaborative'], 1.0)
+        self.assertGreater(beta['score'], next(movie['score'] for movie in results if movie['id'] == 4))
+
 
 if __name__ == '__main__':
     unittest.main()

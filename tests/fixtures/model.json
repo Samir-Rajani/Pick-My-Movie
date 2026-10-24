@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "popularity": {
+    "1": {"count": 100, "mean": 4.0},
+    "2": {"count": 80, "mean": 4.2},
+    "3": {"count": 70, "mean": 3.8},
+    "4": {"count": 60, "mean": 3.9}
+  },
+  "neighbors": {
+    "1": {"2": 0.5, "4": 0.3},
+    "3": {"2": 0.5}
+  }
+}

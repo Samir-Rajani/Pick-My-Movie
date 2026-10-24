@@ -5,11 +5,13 @@ const pickCount = document.querySelector('#pick-count');
 const recs = document.querySelector('#recommendations');
 const status = document.querySelector('#results-status');
 const genreFilter = document.querySelector('#genre-filter');
+const clearButton = document.querySelector('#clear-button');
 const liked = new Map();
 let searchToken = 0;
 let recommendationToken = 0;
 let timer;
-const pickMyMovieBase = location.pathname === '/pickmymovie' || location.pathname.startsWith('/pickmymovie/') ? '/pickmymovie' : '';
+const prefixes = ['/pick-my-movie', '/pickmymovie'];
+const pickMyMovieBase = prefixes.find(prefix => location.pathname === prefix || location.pathname.startsWith(prefix + '/')) || '';
 document.querySelector('.brand').setAttribute('href', `${pickMyMovieBase}/`);
 
 async function getJson(url) {
@@ -32,6 +34,7 @@ function save() {
 function renderPicked() {
   selected.replaceChildren();
   pickCount.textContent = `${liked.size} SELECTED`;
+  clearButton.disabled = liked.size === 0;
   if (!liked.size) selected.append(element('div', 'empty-picked', 'Your favorites will appear here. Start searching to add a movie.'));
   for (const movie of liked.values()) {
     const chip = element('button', 'chip');
@@ -45,11 +48,13 @@ function renderPicked() {
 async function search() {
   const query = searchInput.value.trim();
   const token = ++searchToken;
+  searchResults.setAttribute('aria-busy', 'true');
   try {
     const movies = await getJson(`${pickMyMovieBase}/api/movies?q=${encodeURIComponent(query)}`);
     if (token !== searchToken) return;
     searchResults.replaceChildren();
     const available = movies.filter(movie => !liked.has(movie.id));
+    searchInput.setAttribute('aria-expanded', String(available.length > 0));
     if (!available.length) { searchResults.append(element('div', 'search-help', query ? 'No more matching films. Try another title.' : 'No films available.')); return; }
     for (const movie of available) {
       const button = element('button', 'search-item'); button.type = 'button';
@@ -58,7 +63,12 @@ async function search() {
       button.addEventListener('click', () => { liked.set(movie.id, movie); save(); renderPicked(); recommend(); search(); });
       searchResults.append(button);
     }
-  } catch { searchResults.replaceChildren(element('div', 'search-help', 'Search is unavailable. Check that the local server is running.')); }
+  } catch {
+    searchInput.setAttribute('aria-expanded', 'false');
+    searchResults.replaceChildren(element('div', 'search-help', 'Search is temporarily unavailable. Please try again.'));
+  } finally {
+    if (token === searchToken) searchResults.setAttribute('aria-busy', 'false');
+  }
 }
 
 async function recommend() {
@@ -74,10 +84,16 @@ async function recommend() {
     if (!movies.length) { recs.append(element('div', 'placeholder', 'No matches for this genre. Try another filter.')); return; }
     movies.forEach((movie, index) => {
       const card = element('article', 'movie-card');
-      const top = element('div', 'card-top'); top.append(element('span', 'card-num', String(index + 1).padStart(2, '0') + ' / MATCH'), element('span', 'card-score', `SIMILARITY ${Math.round(movie.score * 100)}`));
-      card.append(top, element('h3', '', movie.title), element('div', 'movie-meta', movie.genres.slice(0, 3).join('  ·  ')), element('div', 'movie-reason', `✦ ${movie.reason}`));
+      const top = element('div', 'card-top'); top.append(element('span', 'card-num', String(index + 1).padStart(2, '0') + ' / MATCH'), element('span', 'card-score', `MATCH ${Math.round(movie.score * 100)}`));
+      const metadata = movie.genres.slice(0, 3).join('  ·  ') || 'Unclassified';
+      const rating = movie.rating ? ` · ${movie.rating.toFixed(1)} avg from ${movie.ratingCount.toLocaleString()} ratings` : '';
+      card.append(top, element('h3', '', movie.title), element('div', 'movie-meta', metadata + rating), element('div', 'movie-reason', `✦ ${movie.reason}`));
       const add = element('button', 'card-like', '+'); add.type = 'button'; add.title = `Add ${movie.title} to favorites`; add.setAttribute('aria-label', add.title);
-      add.addEventListener('click', () => { liked.set(movie.id, movie); save(); renderPicked(); recommend(); search(); document.querySelector('#taste').scrollIntoView({behavior:'smooth'}); });
+      add.addEventListener('click', () => {
+        liked.set(movie.id, movie); save(); renderPicked(); recommend(); search();
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.querySelector('#taste').scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth'});
+      });
       card.append(add); recs.append(card);
     });
   } catch { status.textContent = 'Recommendations are unavailable. Check that the local server is running.'; }
@@ -85,14 +101,29 @@ async function recommend() {
 
 searchInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 150); });
 genreFilter.addEventListener('change', recommend);
-document.querySelector('#clear-button').addEventListener('click', () => { liked.clear(); save(); renderPicked(); recommend(); search(); });
+clearButton.addEventListener('click', () => { liked.clear(); save(); renderPicked(); recommend(); search(); searchInput.focus(); });
+
+function restoreLiked() {
+  const stored = localStorage.getItem('pickmymovie-liked') || localStorage.getItem('cinemamatch-liked');
+  if (!stored) return;
+  try {
+    const movies = JSON.parse(stored);
+    if (!Array.isArray(movies)) throw new TypeError('Saved picks are not an array');
+    for (const movie of movies) {
+      if (movie && Number.isInteger(movie.id) && typeof movie.title === 'string') liked.set(movie.id, movie);
+    }
+  } catch {
+    localStorage.removeItem('pickmymovie-liked');
+    localStorage.removeItem('cinemamatch-liked');
+  }
+}
 
 async function initialize() {
   try {
     const [health, genres] = await Promise.all([getJson(`${pickMyMovieBase}/api/health`), getJson(`${pickMyMovieBase}/api/genres`)]);
     document.querySelector('#data-mode').textContent = `${health.movies.toLocaleString()} FILMS · ${health.mode.toUpperCase()} MODE`;
     genres.forEach(genre => { const option = element('option', '', genre); option.value = genre; genreFilter.append(option); });
-    for (const movie of JSON.parse(localStorage.getItem('pickmymovie-liked') || localStorage.getItem('cinemamatch-liked') || '[]')) if (movie && Number.isInteger(movie.id)) liked.set(movie.id, movie);
+    restoreLiked();
     renderPicked(); await search(); await recommend();
   } catch { searchResults.append(element('div', 'search-help', 'Could not connect to the movie catalog.')); }
 }

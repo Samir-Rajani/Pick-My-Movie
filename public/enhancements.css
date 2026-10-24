@@ -1,0 +1,38 @@
+.clear-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+.search-results[aria-busy="true"] {
+  opacity: 0.65;
+}
+
+.movie-meta {
+  line-height: 1.55;
+}
+
+.search-panel,
+.selection-panel,
+.search-results {
+  min-width: 0;
+}
+
+.search-wrap {
+  width: 100%;
+}
+
+.panel-heading {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.card-like:focus-visible,
+.chip:focus-visible,
+.clear-button:focus-visible,
+.search-item:focus-visible,
+.hero-link:focus-visible,
+.method a:focus-visible {
+  outline: 2px solid #087f67;
+  outline-offset: 3px;
+}

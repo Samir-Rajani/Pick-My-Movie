@@ -19,12 +19,19 @@ engine = Recommender(catalog, DATA / "model.json")
 
 
 class Handler(BaseHTTPRequestHandler):
+    def send_security_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+
     def send_json(self, value: dict | list, status: int = 200):
         payload = json.dumps(value, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
+        self.send_security_headers()
         self.end_headers()
         self.wfile.write(payload)
 
@@ -32,7 +39,13 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         args = parse_qs(parsed.query)
         if parsed.path == "/api/health":
-            return self.send_json({"status": "ok", "movies": len(engine.movies), "mode": "full" if catalog.name == "movies.csv" else "demo", "collaborative": bool(engine.neighbors)})
+            return self.send_json({
+                "status": "ok",
+                "movies": len(engine.movies),
+                "mode": "full" if catalog.name == "movies.csv" else "demo",
+                "collaborative": bool(engine.neighbors),
+                "modelSchema": engine.model.get("schemaVersion"),
+            })
         if parsed.path == "/api/movies":
             return self.send_json(engine.search(args.get("q", [""])[0][:100]))
         if parsed.path == "/api/genres":
@@ -45,15 +58,20 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 return self.send_json({"error": "liked and limit must be integers"}, 400)
             return self.send_json(engine.recommend(liked, limit, args.get("genre", [""])[0][:40]))
-        static = {"/": ("index.html", "text/html"), "/styles.css": ("styles.css", "text/css"), "/app.js": ("app.js", "text/javascript")}
+        static = {
+            "/": ("index.html", "text/html"),
+            "/styles.css": ("styles.css", "text/css"),
+            "/enhancements.css": ("enhancements.css", "text/css"),
+            "/app.js": ("app.js", "text/javascript"),
+        }
         if parsed.path not in static:
             return self.send_json({"error": "Not found"}, 404)
         name, content_type = static[parsed.path]
-        payload = (ROOT / "web" / name).read_bytes()
+        payload = (ROOT / "public" / name).read_bytes()
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", f"{content_type}; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_security_headers()
         self.end_headers()
         self.wfile.write(payload)
 

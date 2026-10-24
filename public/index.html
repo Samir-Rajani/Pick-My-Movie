@@ -7,9 +7,21 @@
   <meta name="description" content="Find your next movie from the films you already love.">
   <title>PickMyMovie — Find your next favorite</title>
   <script>
-    const pickMyMovieBase = location.pathname === '/pickmymovie' || location.pathname.startsWith('/pickmymovie/') ? '/pickmymovie' : '';
-    document.write('<link rel="stylesheet" href="' + pickMyMovieBase + '/styles.css">');
-    document.write('<script src="' + pickMyMovieBase + '/app.js" defer><\\/script>');
+    (() => {
+      const prefixes = ['/pick-my-movie', '/pickmymovie'];
+      const base = prefixes.find(prefix => location.pathname === prefix || location.pathname.startsWith(prefix + '/')) || '';
+      for (const file of ['styles.css', 'enhancements.css']) {
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = `${base}/${file}`;
+        document.head.append(stylesheet);
+      }
+      window.addEventListener('DOMContentLoaded', () => {
+        const script = document.createElement('script');
+        script.src = `${base}/app.js`;
+        document.body.append(script);
+      });
+    })();
   </script>
 </head>
 <body>
@@ -32,14 +44,14 @@
         <div class="builder">
           <div class="search-panel">
             <label for="movie-search">FIND A FILM</label>
-            <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="movie-search" type="search" placeholder="Search by movie title..." autocomplete="off" aria-controls="search-results"><span class="shortcut">SEARCH</span></div>
-            <div id="search-results" class="search-results" aria-live="polite"></div>
+            <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="movie-search" type="search" placeholder="Search titles..." autocomplete="off" aria-controls="search-results" aria-expanded="false"><span class="shortcut">SEARCH</span></div>
+            <div id="search-results" class="search-results" aria-live="polite" aria-busy="false"></div>
           </div>
           <div class="selection-panel"><div class="panel-heading"><span>YOUR PICKS</span><span id="pick-count">0 SELECTED</span></div><div id="selected" class="selected"><div class="empty-picked">Your favorites will appear here. Start searching to add a movie.</div></div><button id="clear-button" class="clear-button" type="button">Clear selections <span aria-hidden="true">×</span></button></div>
         </div>
       </section>
       <section id="discover" class="discover" aria-labelledby="discover-title"><div class="section-heading discover-heading"><div><div class="section-kicker">02 / THE SHORTLIST</div><h2 id="discover-title">Made for your queue.</h2></div><div class="filter-wrap"><label for="genre-filter">FILTER BY GENRE</label><select id="genre-filter"><option value="">All genres</option></select></div></div><div id="results-status" class="results-status" role="status">Choose a film above to see recommendations.</div><div id="recommendations" class="recommendations"></div></section>
-      <section class="method"><span class="method-icon">✳</span><div><h3>How it finds your next favorite</h3><p>Recommendations compare the genres of your picks with the catalog. When the ratings model is available, the engine also considers films liked by viewers with similar taste. Every recommendation includes a short explanation.</p></div><a href="https://github.com/Samir-Rajani" target="_blank" rel="noopener noreferrer">ABOUT THE BUILDER ↗</a></section>
+      <section class="method"><span class="method-icon">✳</span><div><h3>How it finds your next favorite</h3><p>A hybrid ranker combines genre similarity, anonymized historical co-likes, and a small rating-confidence signal. A diversity pass keeps the shortlist from repeating the same genre mix. Every recommendation includes a plain-language reason.</p></div><a href="https://github.com/Samir-Rajani/Pick-My-Movie" target="_blank" rel="noopener noreferrer">VIEW THE METHOD ↗</a></section>
     </main>
     <footer><span>PICKMYMOVIE</span><span>BUILT WITH CURIOSITY · POWERED BY MOVIELENS DATA</span><span>© 2026</span></footer>
   </div>

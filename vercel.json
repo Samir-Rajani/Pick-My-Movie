@@ -6,6 +6,12 @@
       "excludeFiles": "{tests/**,public/**,data/ratings.csv,**/__pycache__/**,**/*.pyc}"
     }
   },
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/styles.css", "destination": "/public/styles.css" },
+    { "source": "/enhancements.css", "destination": "/public/enhancements.css" },
+    { "source": "/app.js", "destination": "/public/app.js" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

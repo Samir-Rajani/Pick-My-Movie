@@ -95,7 +95,7 @@ For a containerized run, use `docker build -t pickmymovie .` and `docker run --r
 
 ### Hosting on your domain
 
-This repository is prepared as a separate Vercel project. The `public/` directory is served through Vercel's CDN and `api/*.py` provides Python Functions for the four API endpoints. `.vercelignore` excludes raw ratings. Keeping PickMyMovie in its own repository lets it deploy independently from the Next.js portfolio at `samirrajani.com`.
+This repository is deployed as a separate Vercel project at [pick-my-movie-sigma.vercel.app](https://pick-my-movie-sigma.vercel.app). Static assets are served through Vercel's CDN and `api/*.py` provides Python Functions for the four API endpoints. `.vercelignore` excludes raw ratings. Keeping PickMyMovie independently deployable from the Next.js portfolio provides a clear release and rollback boundary.
 
 1. After review and approval, commit and push the existing `Pick-My-Movie` repository.
 2. Redeploy its existing Vercel project with the repository root as the project root; `vercel.json` supplies function exclusions and security headers.
@@ -103,7 +103,7 @@ This repository is prepared as a separate Vercel project. The `public/` director
 4. Deploy the Personal Website repository only after step 3 passes. Its external rewrite exposes the app at `samirrajani.com/pick-my-movie`.
 5. Verify the legacy `/pickmymovie` redirect, the case study, sitemap, search, recommendations, genre filtering, and 320px layout on production.
 
-The deployment and DNS steps require access to the GitHub, Vercel, and DNS accounts. They have not been performed by this repository setup.
+The portfolio exposes this deployment at [samirrajani.com/pick-my-movie](https://samirrajani.com/pick-my-movie) through a same-domain rewrite.
 
 ### Project structure
 
